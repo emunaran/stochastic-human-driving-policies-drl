@@ -1,0 +1,6 @@
+data
+models
+venv
+runs
+.idea/
+__pycache__/
