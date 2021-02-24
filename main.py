@@ -1,3 +1,5 @@
+
+import argparse
 import torch
 import numpy as np
 import simulator_unity
@@ -16,31 +18,36 @@ SENSOR_SEGMENT_DIM = 288
 NON_SENSOR_SEGMENT_DIM = 11
 OBSERVATION_TIME_WINDOW = 3
 ACTION_DIM = 2
+ALGORITHM_TYPE = ['PLAIN', 'MDN', 'IRL']
+
+INIT_CURRENT_STEERING = 0.0
+INIT_CURRENT_TORQUE = 0.0
+INIT_HUMAN_HEADING = 0.0
+INIT_HUMAN_TRACKPOS = 3.0
+
+MIN_INIT_SPEED = 30
+MAX_INIT_SPEED = 90
 
 
 def main():
-    ############## Hyperparameters ##############
-
-    train = True # True for train False for test
-    max_episodes = 50000  # max training episodes
-    if train:
-        max_timesteps = 4608  # max timesteps in one episode
-    else:
-        max_timesteps = 99999999
-    n_latent_var = 600  # number of variables in hidden layer
-    update_timestep = batch_size = 512  # update policy every n timesteps
-    mini_batch = 1024
-
-
-    lr = 0.0001
-    betas = (0.9, 0.999)
-    gamma = 0.96  # discount factor
-    lam = 0.95
-    K_epochs = 5  # update policy for K epochs
-    eps_clip = 0.2  # clip parameter for PPO
-    # epsilon = 1
-    # epsilon_decay = 0.9999
-    #############################################
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--algorithm', type=str, default='PLAIN', required=False, choices=ALGORITHM_TYPE)
+    parser.add_argument('--train', default=False, action='store_true', help='true for training, else (test) false')
+    parser.add_argument('--human-gp-data', type=str, required=False, help='path to load the modeled human data based on the GPs')
+    parser.add_argument('--human-data', type=str, required=False, help='path to load the human data')
+    parser.add_argument('--max-episodes', type=int, default=9999999, help='max training episodes')
+    parser.add_argument('--max-timesteps', type=int, default=4608, help='max timesteps in one episode')
+    parser.add_argument('--units', type=int, default=600, help='number of units in the hidden layer')
+    parser.add_argument('--batch-size', type=int, default=512, help='batch size')
+    parser.add_argument('--mini-batch-size', type=int, default=256, help='mini batch size')
+    parser.add_argument('--max-length', type=int, default=512, help='max length parameter for the dynamic update algorithm')
+    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--betas', type=tuple, default=(0.9, 0.999), help='betas for Adam optimizer')
+    parser.add_argument('--gamma', type=float, default=0.96, help='discount factor')
+    parser.add_argument('--lam', type=float, default=0.95, help='lambda for GAE')
+    parser.add_argument('--k-epochs', type=int, default=5, help='policy update number of epochs')
+    parser.add_argument('--eps-clip', type=float, default=0.2, help='clip parameter for PPO')
+    args = parser.parse_args()
 
     # creating environment
     env = simulator_unity
@@ -51,8 +58,8 @@ def main():
     memory = Memory()
     measurements_summary = MeasurementsSummary()
 
-    ppo = PPO(state_dim, action_dim, n_latent_var, lr, betas, gamma, K_epochs, eps_clip, batch_size, mini_batch, lam)
-    print(lr, betas)
+    ppo = PPO(state_dim, action_dim, args.units, args.lr, args.betas, args.gamma, args.k_epochs, args.eps_clip, args.batch_size, args.mini_batch_size, args.lam)
+    # print(lr, betas)
 
     print("now we load the weights")
     try:
@@ -64,49 +71,39 @@ def main():
 
     except:
         print("there is no existing models")
+
     # logging variables
     running_reward = 0
-    # std = ppo.policy.action_var[0]
-    # ppo.policy.action_var[0] += 1e-2
     episode_length = 0
     time_step = 0
-    tot_time_step = 0
-    # max_length = 5888
-    # max_length = 2944
-    # max_length = 2048
-    max_length = 512
 
-    # max_length = 0
-    #avg_throttle = 0
-    stop_flag = 1
     finished_round = False
     rounds_for_update = 2
     time_steps_last_round_updated = 0
     rounds_counter = 0
     best_score = -np.inf
     current_cycle_reward = 0
-    cycles_avg_reward = []
     measurements = []
     total_episodes = 1
 
+    update_timestep = args.batch_size
+    if not args.train:
+        args.max_timesteps = 99999999
+
     # training loop
-    for i_episode in range(1, max_episodes + 1):
+    for i_episode in range(1, args.max_episodes + 1):
 
         episode_reward = 0
         obs = simulator_unity.get_init_obs()
         initial_speed = float(obs['speed'])
 
-        current_steering = 0.0
-        current_torque = 0.0
-
-        t1_obs = simulator_unity.make_pre_observation(obs, current_steering, current_torque)
+        t1_obs = simulator_unity.make_pre_observation(obs, INIT_CURRENT_STEERING, INIT_CURRENT_TORQUE)
         t2_obs = copy.copy(t1_obs)
-        human_heading = 0.0
-        human_trackPos = 3.0
-        ob = simulator_unity.make_observation(obs, current_steering, current_torque, t1_obs, t2_obs, human_heading, human_trackPos)
+
+        ob = simulator_unity.make_observation(obs, INIT_CURRENT_STEERING, INIT_CURRENT_TORQUE, t1_obs, t2_obs, INIT_HUMAN_HEADING, INIT_HUMAN_TRACKPOS)
         state = tuple2array(ob)
 
-        while initial_speed < np.random.uniform(30,90):
+        while initial_speed < np.random.uniform(MIN_INIT_SPEED, MAX_INIT_SPEED):
             finished_round = False
             a_drive = [0, 1, 0]
             ob, reward, done, init_pointer, _, _ = env.step(a_drive, episode_step=0, pre_obs=t1_obs, t_2_obs=t2_obs, episode_num=i_episode-1)
@@ -116,11 +113,11 @@ def main():
             t1_obs = get_t1_obs(t1_obs, ob)
             t2_obs = get_t2_obs(t2_obs, ob)
 
-        for t in range(max_timesteps):
+        for t in range(args.max_timesteps):
             time_steps_last_round_updated+=1
             time_step += 1
             # Running policy_old:
-            if train == False:
+            if args.train == False:
                 action = ppo.select_stochastic_action(state)
                 # action = ppo.select_deterministic_action(state)
             else:
@@ -152,7 +149,7 @@ def main():
                     finished_round = True
                     print("finished a full round - update parameters!")
 
-            if train:
+            if args.train:
                 memory.rewards.append(reward)
                 memory.masks.append(1 - done)
                 # update if its time
@@ -184,14 +181,14 @@ def main():
 
         episode_length += t
 
-        if train:
-            if episode_length+1 >= max_length:
+        if args.train:
+            if episode_length+1 >= args.max_length:
                 print("episode_length: ", episode_length)
-                max_length = episode_length+1
-                substraction = (max_length*2)%mini_batch
+                args.max_length = episode_length+1
+                substraction = (args.max_length*2)%args.mini_batch
                 print("substraction: ", episode_length)
-                tmp = max(512, max_length*2 - substraction)
-                update_timestep = min(tmp, max_timesteps) # 5.11.19
+                tmp = max(512, args.max_length*2 - substraction)
+                update_timestep = min(tmp, args.max_timesteps) # 5.11.19
             print("update_timestep: ", update_timestep)
 
 
@@ -211,7 +208,7 @@ def main():
         running_reward = 0
         episode_length = 0
 
-        if train:
+        if args.train:
             save_model(ppo, episode_reward, best_score)
 
 
