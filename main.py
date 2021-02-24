@@ -1,6 +1,7 @@
 
 import argparse
 import torch
+import pandas as pd
 import numpy as np
 import simulator_unity
 import tensorflow as tf
@@ -9,6 +10,7 @@ import copy
 from tensorboardX import SummaryWriter
 from model.memory.memory import Memory, MeasurementsSummary
 from model.algorithm.ppo import PPO
+from model.algorithm.gail import GAIL
 from utils.utils import tuple2array, get_t1_obs, get_t2_obs, save_model
 
 writer = SummaryWriter()
@@ -33,8 +35,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--algorithm', type=str, default='PLAIN', required=False, choices=ALGORITHM_TYPE)
     parser.add_argument('--train', default=False, action='store_true', help='true for training, else (test) false')
-    parser.add_argument('--human-gp-data', type=str, required=False, help='path to load the modeled human data based on the GPs')
-    parser.add_argument('--human-data', type=str, required=False, help='path to load the human data')
+    parser.add_argument('--human-gp-data', type=str, default='./data/expert/gp/GP_expert.csv', help='path to load the modeled human data based on the GPs')
+    parser.add_argument('--human-demonstrations', type=str, default='./data/expert/demonstrations/demonstrations.csv', help='path to load the human demonstrations')
     parser.add_argument('--max-episodes', type=int, default=9999999, help='max training episodes')
     parser.add_argument('--max-timesteps', type=int, default=4608, help='max timesteps in one episode')
     parser.add_argument('--units', type=int, default=600, help='number of units in the hidden layer')
@@ -58,16 +60,23 @@ def main():
     memory = Memory()
     measurements_summary = MeasurementsSummary()
 
-    ppo = PPO(state_dim, action_dim, args.units, args.lr, args.betas, args.gamma, args.k_epochs, args.eps_clip, args.batch_size, args.mini_batch_size, args.lam)
+    if args.algorithm == 'GAIL':
+        # load human demonstrations
+        human_demonstrations = pd.read_csv(args.human_demonstrations)
+        human_demonstrations = np.array(human_demonstrations)
+        print("human_demonstrations.shape", human_demonstrations.shape)
+        model = GAIL(state_dim, action_dim, args)
+    else:
+        model = PPO(state_dim, action_dim, args)#args.units, args.lr, args.betas, args.gamma, args.k_epochs, args.eps_clip, args.batch_size, args.mini_batch_size, args.lam)
     # print(lr, betas)
 
     print("now we load the weights")
     try:
-        ppo.policy.actor.load_state_dict(torch.load("models/best/actor.pt"))
-        ppo.policy.critic.load_state_dict(torch.load("models/best/critic.pt"))
+        model.policy.actor.load_state_dict(torch.load("models/best/actor.pt"))
+        model.policy.critic.load_state_dict(torch.load("models/best/critic.pt"))
 
-        ppo.policy_old.actor.load_state_dict(torch.load("models/best/actor_old.pt"))
-        ppo.policy_old.critic.load_state_dict(torch.load("models/best/critic_old.pt"))
+        model.policy_old.actor.load_state_dict(torch.load("models/best/actor_old.pt"))
+        model.policy_old.critic.load_state_dict(torch.load("models/best/critic_old.pt"))
 
     except:
         print("there is no existing models")
@@ -118,10 +127,10 @@ def main():
             time_step += 1
             # Running policy_old:
             if args.train == False:
-                action = ppo.select_stochastic_action(state)
-                # action = ppo.select_deterministic_action(state)
+                action = model.select_stochastic_action(state)
+                # action = model.select_deterministic_action(state)
             else:
-                action = ppo.select_action(state, memory, measurements_summary)
+                action = model.select_action(state, memory, measurements_summary)
 
             action = np.clip(action, -1,1)
             ob, reward, done, current_pointer, _, _ = env.step(action, episode_step=t, pre_obs=t1_obs, t_2_obs=t2_obs, episode_num=i_episode-1)
@@ -157,9 +166,9 @@ def main():
 
                     env.end()
                     state_eval = torch.FloatTensor(state.reshape(1, -1)).to(device)
-                    ppo.batch_size = time_step
-                    last_value = ppo.policy_old.critic(state_eval)
-                    ppo.update(memory, last_value)
+                    model.batch_size = time_step
+                    last_value = model.policy_old.critic(state_eval)
+                    model.update_actor_critic(memory, last_value)
                     memory.clear_memory()
                     time_step = 0
 
@@ -209,7 +218,7 @@ def main():
         episode_length = 0
 
         if args.train:
-            save_model(ppo, episode_reward, best_score)
+            save_model(model, episode_reward, best_score)
 
 
 if __name__ == '__main__':

@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from model.models.one_gaussian import ActorCritic
+from model.models.gail_models import ActorCritic, Discriminator
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class PPO:
-    def __init__(self, state_dim, action_dim, args):#n_latent_var, lr, betas, gamma, K_epochs, eps_clip, batch_size, mini_batch, lam):
+class GAIL:
+    def __init__(self, state_dim, action_dim, args):# n_latent_var, lr, betas, gamma, K_epochs, eps_clip, batch_size, mini_batch, lam, discrim_update_num):
         self.lr = args.lr
         self.units = args.units
         self.betas = args.betas
@@ -16,9 +16,13 @@ class PPO:
         self.mini_batch = args.mini_batch
         self.eps_clip = args.eps_clip
         self.k_epochs = args.k_epochs
+        self.discrim_update_num = args.discrim_update_num
 
         self.policy = ActorCritic(state_dim, action_dim, self.units).to(device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
+
+        self.discriminator = Discriminator(state_dim + action_dim, self.units).to(device)
+        self.discriminator_optimizer = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
         self.policy_old = ActorCritic(state_dim, action_dim, self.units).to(device)
 
         self.MseLoss = nn.MSELoss()
@@ -89,3 +93,33 @@ class PPO:
 
         # Copy new weights into old policy:
         self.policy_old.load_state_dict(self.policy.state_dict())
+
+    def train_discriminator(self, memory, demonstrations):
+        # memory = np.array(memory)
+        # states = np.vstack(memory[:, 0])
+        # actions = list(memory[:, 1])
+        #
+        # states = torch.Tensor(states)
+        # actions = torch.Tensor(actions)
+
+        states = torch.stack(memory.states).to(device).detach()
+        actions = torch.stack(memory.actions).to(device).detach()
+
+        criterion = torch.nn.BCELoss()
+
+        for _ in range(self.discrim_update_num):
+            learner = self.discriminator(torch.cat([actions, states], dim=1))
+            demonstrations = torch.Tensor(demonstrations)
+            expert = self.discriminator(demonstrations)
+
+            discrim_loss = criterion(learner, torch.ones((states.shape[0], 1))) + \
+                           criterion(expert, torch.zeros((demonstrations.shape[0], 1)))
+
+            self.discriminator_optimizer.zero_grad()
+            discrim_loss.backward()
+            self.discriminator_optimizer.step()
+
+        expert_acc = ((self.discriminator(demonstrations) < 0.5).float()).mean()
+        learner_acc = ((self.discriminator(torch.cat([states, actions], dim=1)) > 0.5).float()).mean()
+
+        return expert_acc, learner_acc
