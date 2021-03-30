@@ -13,7 +13,7 @@ class PPO:
         self.gamma = args.gamma
         self.lam = args.lam
         self.batch_size = args.batch_size
-        self.mini_batch = args.mini_batch
+        self.mini_batch_size = args.mini_batch_size
         self.eps_clip = args.eps_clip
         self.k_epochs = args.k_epochs
 
@@ -67,8 +67,8 @@ class PPO:
         # Optimize policy for K epochs:
         for _ in range(self.k_epochs):
             np.random.shuffle(inds)
-            for start in range(0, self.batch_size, self.mini_batch):
-                end = start + self.mini_batch
+            for start in range(0, self.batch_size, self.mini_batch_size):
+                end = start + self.mini_batch_size
                 mbinds = inds[start:end]
                 # Evaluating old actions and values :
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states[mbinds], old_actions[mbinds])

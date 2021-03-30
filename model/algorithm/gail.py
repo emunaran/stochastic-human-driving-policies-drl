@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import math
 from model.models.gail_models import ActorCritic, Discriminator
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -13,7 +14,7 @@ class GAIL:
         self.gamma = args.gamma
         self.lam = args.lam
         self.batch_size = args.batch_size
-        self.mini_batch = args.mini_batch
+        self.mini_batch_size = args.mini_batch_size
         self.eps_clip = args.eps_clip
         self.k_epochs = args.k_epochs
         self.discrim_update_num = args.discrim_update_num
@@ -22,7 +23,7 @@ class GAIL:
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
 
         self.discriminator = Discriminator(state_dim + action_dim, self.units).to(device)
-        self.discriminator_optimizer = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
+        self.discriminator_optimizer = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr*0.1, betas=self.betas) #, weight_decay=1e-5
         self.policy_old = ActorCritic(state_dim, action_dim, self.units).to(device)
 
         self.MseLoss = nn.MSELoss()
@@ -38,6 +39,13 @@ class GAIL:
     def select_stochastic_action(self, state):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         return self.policy_old.stochastic_act(state).cpu().data.numpy().flatten()
+
+    def get_reward(self, state, action):
+        state = torch.Tensor(state)
+        action = torch.Tensor(action)
+        state_action = torch.cat([state, action])
+        with torch.no_grad():
+            return -math.log(self.discriminator(state_action)[0].item())
 
     def update_actor_critic(self, memory, last_value):
 
@@ -71,8 +79,8 @@ class GAIL:
         # Optimize policy for K epochs:
         for _ in range(self.k_epochs):
             np.random.shuffle(inds)
-            for start in range(0, self.batch_size, self.mini_batch):
-                end = start + self.mini_batch
+            for start in range(0, self.batch_size, self.mini_batch_size):
+                end = start + self.mini_batch_size
                 mbinds = inds[start:end]
                 # Evaluating old actions and values :
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states[mbinds], old_actions[mbinds])
@@ -102,8 +110,8 @@ class GAIL:
         # states = torch.Tensor(states)
         # actions = torch.Tensor(actions)
 
-        states = torch.stack(memory.states).to(device).detach()
-        actions = torch.stack(memory.actions).to(device).detach()
+        states = torch.stack(memory.states).squeeze(dim=1).to(device).detach()
+        actions = torch.stack(memory.actions).squeeze(dim=1).to(device).detach()
 
         criterion = torch.nn.BCELoss()
 

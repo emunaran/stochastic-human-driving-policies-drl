@@ -20,7 +20,7 @@ SENSOR_SEGMENT_DIM = 288
 NON_SENSOR_SEGMENT_DIM = 11
 OBSERVATION_TIME_WINDOW = 3
 ACTION_DIM = 2
-ALGORITHM_TYPE = ['PLAIN', 'MDN', 'IRL']
+ALGORITHM_TYPE = ['PLAIN', 'MDN', 'GAIL']
 
 INIT_CURRENT_STEERING = 0.0
 INIT_CURRENT_TORQUE = 0.0
@@ -43,7 +43,8 @@ def main():
     parser.add_argument('--batch-size', type=int, default=512, help='batch size')
     parser.add_argument('--mini-batch-size', type=int, default=256, help='mini batch size')
     parser.add_argument('--max-length', type=int, default=512, help='max length parameter for the dynamic update algorithm')
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--discrim-update-num', type=int, default=1, help='number of updates for discriminator')
+    parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
     parser.add_argument('--betas', type=tuple, default=(0.9, 0.999), help='betas for Adam optimizer')
     parser.add_argument('--gamma', type=float, default=0.96, help='discount factor')
     parser.add_argument('--lam', type=float, default=0.95, help='lambda for GAE')
@@ -72,11 +73,14 @@ def main():
 
     print("now we load the weights")
     try:
-        model.policy.actor.load_state_dict(torch.load("models/best/actor.pt"))
-        model.policy.critic.load_state_dict(torch.load("models/best/critic.pt"))
+        model.policy.actor.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/actor.pt"))
+        model.policy.critic.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/critic.pt"))
 
-        model.policy_old.actor.load_state_dict(torch.load("models/best/actor_old.pt"))
-        model.policy_old.critic.load_state_dict(torch.load("models/best/critic_old.pt"))
+        model.policy_old.actor.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/actor_old.pt"))
+        model.policy_old.critic.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/critic_old.pt"))
+
+        if args.algorithm == 'GAIL':
+            model.discriminator.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/discriminator.pt"))
 
     except:
         print("there is no existing models")
@@ -134,6 +138,8 @@ def main():
 
             action = np.clip(action, -1,1)
             ob, reward, done, current_pointer, _, _ = env.step(action, episode_step=t, pre_obs=t1_obs, t_2_obs=t2_obs, episode_num=i_episode-1)
+            if args.algorithm == 'GAIL':
+                reward = model.get_reward(state, action)
             print("reward: ", reward)
             state = tuple2array(ob)
             print("init pointer: ", init_pointer, "current_pointer: ", current_pointer)
@@ -169,6 +175,9 @@ def main():
                     model.batch_size = time_step
                     last_value = model.policy_old.critic(state_eval)
                     model.update_actor_critic(memory, last_value)
+                    if args.algorithm == 'GAIL':
+                        expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
+                        print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                     memory.clear_memory()
                     time_step = 0
 
@@ -194,7 +203,7 @@ def main():
             if episode_length+1 >= args.max_length:
                 print("episode_length: ", episode_length)
                 args.max_length = episode_length+1
-                substraction = (args.max_length*2)%args.mini_batch
+                substraction = (args.max_length*2)%args.mini_batch_size
                 print("substraction: ", episode_length)
                 tmp = max(512, args.max_length*2 - substraction)
                 update_timestep = min(tmp, args.max_timesteps) # 5.11.19
@@ -218,7 +227,7 @@ def main():
         episode_length = 0
 
         if args.train:
-            save_model(model, episode_reward, best_score)
+            save_model(model, episode_reward, best_score, args.algorithm)
 
 
 if __name__ == '__main__':

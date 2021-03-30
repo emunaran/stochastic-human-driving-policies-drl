@@ -56,20 +56,26 @@ def get_t2_obs(t2_obs, ob):
     return t2_obs
 
 
-def save_model(model, episode_reward, best_score):
+def save_model(model, episode_reward, best_score, algorithm_name):
 
     if episode_reward > best_score:
         best_score = episode_reward
         # save the best model:
-        torch.save(model.policy.actor.state_dict(), "saved_models/best/actor.pt")
-        torch.save(model.policy.critic.state_dict(), "saved_models/best/critic.pt")
+        torch.save(model.policy.actor.state_dict(), f"saved_models/{algorithm_name}/best/actor.pt")
+        torch.save(model.policy.critic.state_dict(), f"saved_models/{algorithm_name}/best/critic.pt")
 
-        torch.save(model.policy_old.actor.state_dict(), "saved_models/best/actor_old.pt")
-        torch.save(model.policy_old.critic.state_dict(), "saved_models/best/critic_old.pt")
+        torch.save(model.policy_old.actor.state_dict(), f"saved_models/{algorithm_name}/best/actor_old.pt")
+        torch.save(model.policy_old.critic.state_dict(), f"saved_models/{algorithm_name}/best/critic_old.pt")
+
+        if algorithm_name == 'GAIL':
+            torch.save(model.discriminator.state_dict(), f"saved_models/{algorithm_name}/best/discriminator.pt")
 
     # save the last model:
-    torch.save(model.policy.actor.state_dict(), "saved_models/actor.pt")
-    torch.save(model.policy.critic.state_dict(), "saved_models/critic.pt")
+    torch.save(model.policy.actor.state_dict(), f"saved_models/{algorithm_name}/actor.pt")
+    torch.save(model.policy.critic.state_dict(), f"saved_models/{algorithm_name}/critic.pt")
 
-    torch.save(model.policy_old.actor.state_dict(), "saved_models/actor_old.pt")
-    torch.save(model.policy_old.critic.state_dict(), "saved_models/critic_old.pt")
+    torch.save(model.policy_old.actor.state_dict(), f"saved_models/{algorithm_name}/actor_old.pt")
+    torch.save(model.policy_old.critic.state_dict(), f"saved_models/{algorithm_name}/critic_old.pt")
+
+    if algorithm_name == 'GAIL':
+        torch.save(model.discriminator.state_dict(), f"saved_models/{algorithm_name}/discriminator.pt")

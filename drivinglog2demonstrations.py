@@ -99,8 +99,8 @@ def make_observation(data, pre_obs, t_2_obs):
         speed=np.clip(np.array(float(data['speed']), dtype=np.float32) / 100.0, 0, 1),
         sign_theta=np.clip(np.array(float(data['signedTheta']), dtype=np.float32)/90, -1, 1),#-human_heading
         trackPos=np.clip(np.array(float(data['trackPos']), dtype=np.float32) / 6., -1, 1), #-human_trackPos
-        rightLane=np.array(float(data['trackPos'])+3, dtype=np.float32) / 9,
-        leftLane=np.array(float(data['trackPos'])-3, dtype=np.float32) / 9,
+        rightLane=np.array(float(data['trackPos'])-3, dtype=np.float32) / 9,
+        leftLane=np.array(float(data['trackPos'])+3, dtype=np.float32) / 9,
         right_obstacles_front=np.clip(np.array(right_obstacles_front, dtype=np.float32) / 300, 0, 1),
         right_obstacles_back=np.clip(np.array(right_obstacles_back, dtype=np.float32) / 300, 0, 1),
         left_obstacles_front=np.clip(np.array(left_obstacles_front, dtype=np.float32) / 300, 0, 1),
@@ -186,8 +186,8 @@ def make_pre_observation(data):
         speed=np.clip(np.array(float(data['speed']), dtype=np.float32) / 100.0, 0, 1),
         sign_theta=np.clip(np.array(float(data['signedTheta']), dtype=np.float32) / 90, -1, 1),
         trackPos=np.clip(np.array(float(data['trackPos']), dtype=np.float32) / 6., -1, 1),
-        rightLane=np.array(float(data['trackPos'])+3, dtype=np.float32) / 9,
-        leftLane=np.array(float(data['trackPos'])-3, dtype=np.float32) / 9,
+        rightLane=np.array(float(data['trackPos'])-3, dtype=np.float32) / 9,
+        leftLane=np.array(float(data['trackPos'])+3, dtype=np.float32) / 9,
         right_obstacles_front=np.clip(np.array(right_obstacles_front, dtype=np.float32) / 300, 0, 1),
         right_obstacles_back=np.clip(np.array(right_obstacles_back, dtype=np.float32) / 300, 0, 1),
         left_obstacles_front=np.clip(np.array(left_obstacles_front, dtype=np.float32) / 300, 0, 1),
