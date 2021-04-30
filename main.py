@@ -176,8 +176,17 @@ def main():
                     last_value = model.policy_old.critic(state_eval)
                     model.update_actor_critic(memory, last_value)
                     if args.algorithm == 'GAIL':
-                        expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
+
+                        # check creterion whether or not training the discriminator to avoid overfit:
+                        states = torch.stack(memory.states).squeeze(dim=1).to(device).detach()
+                        actions = torch.stack(memory.actions).squeeze(dim=1).to(device).detach()
+                        learner_acc = ((model.discriminator(torch.cat([states, actions], dim=1)) > 0.5).float()).mean()
+                        demonstrations = torch.Tensor(human_demonstrations)
+                        expert_acc = ((model.discriminator(demonstrations) < 0.5).float()).mean()
                         print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
+                        if learner_acc > 0.85:
+                            expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
+                            print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                     memory.clear_memory()
                     time_step = 0
 
