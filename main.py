@@ -12,6 +12,8 @@ from model.memory.memory import Memory, MeasurementsSummary
 from model.algorithm.ppo import PPO
 from model.algorithm.gail import GAIL
 from utils.utils import tuple2array, get_t1_obs, get_t2_obs, save_model
+from utils.logger import Logger
+import logging
 
 writer = SummaryWriter()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -52,6 +54,8 @@ def main():
     parser.add_argument('--eps-clip', type=float, default=0.2, help='clip parameter for PPO')
     args = parser.parse_args()
 
+    Logger.init_logger(log_path='log_files', log_name=args.algorithm)
+    logging.info(f'logging for {args.algorithm} was started')
     # creating environment
     env = simulator_unity
 
@@ -183,9 +187,11 @@ def main():
                         learner_acc = ((model.discriminator(torch.cat([states, actions], dim=1)) > 0.5).float()).mean()
                         demonstrations = torch.Tensor(human_demonstrations)
                         expert_acc = ((model.discriminator(demonstrations) < 0.5).float()).mean()
+                        logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                         print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                         if learner_acc > 0.85:
                             expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
+                            logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                             print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                     memory.clear_memory()
                     time_step = 0
