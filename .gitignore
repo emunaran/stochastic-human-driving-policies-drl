@@ -4,3 +4,4 @@ venv
 runs
 .idea/
 __pycache__/
+log_files
