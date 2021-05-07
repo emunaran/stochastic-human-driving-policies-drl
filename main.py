@@ -189,7 +189,7 @@ def main():
                         expert_acc = ((model.discriminator(demonstrations) < 0.5).float()).mean()
                         logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                         print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
-                        if learner_acc > 0.85:
+                        if expert_acc < 0.95 or learner_acc > 0.85:
                             expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
                             logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                             print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
