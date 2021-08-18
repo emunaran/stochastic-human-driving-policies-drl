@@ -1,5 +1,9 @@
+import os.path
+
 import numpy as np
 import torch
+from pathlib import Path
+import datetime
 
 def tuple2array(ob):
     converted_obs = np.hstack((ob.sign_theta, ob.trackPos, ob.leftLane, ob.rightLane, ob.speed, ob.current_steering, ob.current_torque,
@@ -79,3 +83,18 @@ def save_model(model, episode_reward, best_score, algorithm_name):
 
     if algorithm_name == 'GAIL':
         torch.save(model.discriminator.state_dict(), f"saved_models/{algorithm_name}/discriminator.pt")
+
+
+def save_model_checkpoint(model, algorithm_name):
+
+    cp_path = f'saved_models/{algorithm_name}/checkpoints/{datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}'
+    Path(cp_path).mkdir(parents=True, exist_ok=True)
+
+    torch.save(model.policy.actor.state_dict(), os.path.join(cp_path, 'actor.pt'))
+    torch.save(model.policy.critic.state_dict(), os.path.join(cp_path, 'critic.pt'))
+
+    torch.save(model.policy_old.actor.state_dict(), os.path.join(cp_path, 'actor_old.pt'))
+    torch.save(model.policy_old.critic.state_dict(), os.path.join(cp_path, 'critic_old.pt'))
+
+    if algorithm_name == 'GAIL':
+        torch.save(model.discriminator.state_dict(), os.path.join(cp_path, 'discriminator.pt'))

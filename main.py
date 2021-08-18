@@ -11,7 +11,7 @@ from tensorboardX import SummaryWriter
 from model.memory.memory import Memory, MeasurementsSummary
 from model.algorithm.ppo import PPO
 from model.algorithm.gail import GAIL
-from utils.utils import tuple2array, get_t1_obs, get_t2_obs, save_model
+from utils.utils import tuple2array, get_t1_obs, get_t2_obs, save_model, save_model_checkpoint
 from utils.logger import Logger
 import logging
 
@@ -189,10 +189,10 @@ def main():
                         expert_acc = ((model.discriminator(demonstrations) < 0.5).float()).mean()
                         logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                         print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
-                        if expert_acc < 0.95 or learner_acc > 0.85:
-                            expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
-                            logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
-                            print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
+                        # if expert_acc < 0.95 or learner_acc > 0.85:
+                        expert_acc, learner_acc = model.train_discriminator(memory, human_demonstrations)
+                        logging.info("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
+                        print("Expert: %.2f%% | Learner: %.2f%%" % (expert_acc * 100, learner_acc * 100))
                     memory.clear_memory()
                     time_step = 0
 
@@ -243,6 +243,7 @@ def main():
 
         if args.train:
             save_model(model, episode_reward, best_score, args.algorithm)
+            save_model_checkpoint(model, args.algorithm)
 
 
 if __name__ == '__main__':

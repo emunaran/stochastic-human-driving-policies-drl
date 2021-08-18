@@ -9,6 +9,8 @@ import eventlet.wsgi
 from flask import Flask
 import time
 import queue
+import logging
+
 
 counter = 0
 sio = socketio.Server()
@@ -17,7 +19,7 @@ condition = threading.Condition()
 q = queue.Queue()
 game_ended = False
 time_step = 0
-train = True
+train = False
 if train:
     max_episode_step = 4608
 else:
@@ -137,6 +139,7 @@ def step(u, episode_step, pre_obs, t_2_obs, episode_num):
         global round_num
         round_num = round_num + 1
         print("round_num ", round_num)
+        logging.info(f'round_number: {round_num}')
         pre_episode_step = episode_step
 
 
