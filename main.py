@@ -87,8 +87,7 @@ def main():
 
         if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
             model.discriminator.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/discriminator.pt"))
-
-    except:
+    except FileNotFoundError:
         print("there is no existing models")
 
     # logging variables
