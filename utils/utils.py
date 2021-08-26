@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from utils import constants
+
 
 def tuple2array(ob):
     converted_obs = np.hstack((ob.sign_theta, ob.trackPos, ob.leftLane, ob.rightLane, ob.speed, ob.current_steering, ob.current_torque,
@@ -32,6 +34,7 @@ def get_t1_obs(t1_obs, ob):
     )
 
     return t1_obs
+
 
 def get_t2_obs(t2_obs, ob):
     t2_obs = t2_obs._replace(
@@ -67,7 +70,7 @@ def save_model(model, episode_reward, best_score, algorithm_name):
         torch.save(model.policy_old.actor.state_dict(), f"saved_models/{algorithm_name}/best/actor_old.pt")
         torch.save(model.policy_old.critic.state_dict(), f"saved_models/{algorithm_name}/best/critic_old.pt")
 
-        if algorithm_name == 'GAIL':
+        if algorithm_name == constants.ALGORITHM_TYPE.GAIL:
             torch.save(model.discriminator.state_dict(), f"saved_models/{algorithm_name}/best/discriminator.pt")
 
     # save the last model:
@@ -77,5 +80,5 @@ def save_model(model, episode_reward, best_score, algorithm_name):
     torch.save(model.policy_old.actor.state_dict(), f"saved_models/{algorithm_name}/actor_old.pt")
     torch.save(model.policy_old.critic.state_dict(), f"saved_models/{algorithm_name}/critic_old.pt")
 
-    if algorithm_name == 'GAIL':
+    if algorithm_name == constants.ALGORITHM_TYPE.GAIL:
         torch.save(model.discriminator.state_dict(), f"saved_models/{algorithm_name}/discriminator.pt")

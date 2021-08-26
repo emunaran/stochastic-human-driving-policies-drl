@@ -6,9 +6,9 @@ from CustomeActivationFunctions import HalfSizeSigmoid, QuarterSizeSigmoid, Soft
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, n_var, action_std=0.0):
-        super(ActorCritic, self).__init__()
+class ActorCriticOneGaussian(nn.Module):
+    def __init__(self, state_dim, action_dim, n_var):
+        super(ActorCriticOneGaussian, self).__init__()
         self.actor = nn.Sequential(
             nn.Linear(state_dim, n_var),
             nn.ReLU(),

@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from model.models.one_gaussian import ActorCritic
+from model.models.one_gaussian import ActorCriticOneGaussian
+from model.models.mdn import ActorCriticMDN
+from utils import constants
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -16,11 +18,16 @@ class PPO:
         self.mini_batch_size = args.mini_batch_size
         self.eps_clip = args.eps_clip
         self.k_epochs = args.k_epochs
+        self.n_gaussian = args.n_gaussian
 
-        self.policy = ActorCritic(state_dim, action_dim, self.units).to(device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
-        self.policy_old = ActorCritic(state_dim, action_dim, self.units).to(device)
+        if args.algorithm == constants.ALGORITHM_TYPE.PLAIN:
+            self.policy = ActorCriticOneGaussian(state_dim, action_dim, self.units).to(device)
+            self.policy_old = ActorCriticOneGaussian(state_dim, action_dim, self.units).to(device)
+        elif args.algorithm == constants.ALGORITHM_TYPE.MDN:
+            self.policy = ActorCriticMDN(state_dim, action_dim, self.units, self.n_gaussian).to(device)
+            self.policy_old = ActorCriticMDN(state_dim, action_dim, self.units, self.n_gaussian).to(device)
 
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr, betas=self.betas)
         self.MseLoss = nn.MSELoss()
 
     def select_action(self, state, memory, measurements_summary):
