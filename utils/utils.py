@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import constants
+from utils import constants
 
 
 def tuple2array(ob):
