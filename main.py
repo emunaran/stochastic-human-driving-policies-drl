@@ -19,20 +19,6 @@ from dataclasses import asdict
 writer = SummaryWriter()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# SENSOR_SEGMENT_DIM = 288
-# NON_SENSOR_SEGMENT_DIM = 11
-# OBSERVATION_TIME_WINDOW = 3
-# ACTION_DIM = 2
-# ALGORITHM_TYPE = ['PLAIN', 'MDN', 'GAIL']
-#
-# INIT_CURRENT_STEERING = 0.0
-# INIT_CURRENT_TORQUE = 0.0
-# INIT_HUMAN_HEADING = 0.0
-# INIT_HUMAN_TRACKPOS = 3.0
-#
-# MIN_INIT_SPEED = 30
-# MAX_INIT_SPEED = 90
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -231,9 +217,6 @@ def main():
         writer.add_scalar('data/total_reward', running_reward, i_episode)
         writer.add_scalar('var/steering_var', np.mean(measurements_summary.steering_var), i_episode)
         writer.add_scalar('var/throttle_var', np.mean(measurements_summary.throttle_var), i_episode)
-        writer.add_scalar('var/max_steering_var', np.max(measurements_summary.steering_var), i_episode)
-        writer.add_scalar('var/max_throttle_var', np.max(measurements_summary.throttle_var), i_episode)
-
         measurements_summary.clear_summary()
 
         total_episodes +=1

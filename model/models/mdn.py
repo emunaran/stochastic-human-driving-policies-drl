@@ -43,7 +43,6 @@ class ActorCriticMDN(nn.Module):
         )
         self.n_gaussian = n_gaussian
 
-
     def forward(self,x):
         params = self.actor(x)
         means, sds = torch.split(params, params.shape[1]//2, dim=1)
@@ -78,7 +77,6 @@ class ActorCriticMDN(nn.Module):
         alphas = OneHotCategorical(logits=alpha_params)
 
         return alphas, MultivariateNormal(mb_tensor_means.transpose(0, 1), torch.diag_embed(mb_tensor_sd.transpose(0, 1)).to(device))
-
 
     def act(self, state, memory, measurements_summary):
         value = self.critic(state)
