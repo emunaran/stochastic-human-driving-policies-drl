@@ -1,4 +1,3 @@
-
 import argparse
 import torch
 import pandas as pd
@@ -14,28 +13,30 @@ from model.algorithm.gail import GAIL
 from utils.utils import tuple2array, get_t1_obs, get_t2_obs, save_model
 from utils.logger import Logger
 import logging
+from utils import constants
+from dataclasses import asdict
 
 writer = SummaryWriter()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-SENSOR_SEGMENT_DIM = 288
-NON_SENSOR_SEGMENT_DIM = 11
-OBSERVATION_TIME_WINDOW = 3
-ACTION_DIM = 2
-ALGORITHM_TYPE = ['PLAIN', 'MDN', 'GAIL']
-
-INIT_CURRENT_STEERING = 0.0
-INIT_CURRENT_TORQUE = 0.0
-INIT_HUMAN_HEADING = 0.0
-INIT_HUMAN_TRACKPOS = 3.0
-
-MIN_INIT_SPEED = 30
-MAX_INIT_SPEED = 90
+# SENSOR_SEGMENT_DIM = 288
+# NON_SENSOR_SEGMENT_DIM = 11
+# OBSERVATION_TIME_WINDOW = 3
+# ACTION_DIM = 2
+# ALGORITHM_TYPE = ['PLAIN', 'MDN', 'GAIL']
+#
+# INIT_CURRENT_STEERING = 0.0
+# INIT_CURRENT_TORQUE = 0.0
+# INIT_HUMAN_HEADING = 0.0
+# INIT_HUMAN_TRACKPOS = 3.0
+#
+# MIN_INIT_SPEED = 30
+# MAX_INIT_SPEED = 90
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--algorithm', type=str, default='PLAIN', required=False, choices=ALGORITHM_TYPE)
+    parser.add_argument('--algorithm', type=str, default='PLAIN', choices=list(asdict(constants.ALGORITHM_TYPE).values()))
     parser.add_argument('--train', default=False, action='store_true', help='true for training, else (test) false')
     parser.add_argument('--human-gp-data', type=str, default='./data/expert/gp/GP_expert.csv', help='path to load the modeled human data based on the GPs')
     parser.add_argument('--human-demonstrations', type=str, default='./data/expert/demonstrations/demonstrations.csv', help='path to load the human demonstrations')
@@ -52,6 +53,7 @@ def main():
     parser.add_argument('--lam', type=float, default=0.95, help='lambda for GAE')
     parser.add_argument('--k-epochs', type=int, default=5, help='policy update number of epochs')
     parser.add_argument('--eps-clip', type=float, default=0.2, help='clip parameter for PPO')
+    parser.add_argument('--n-gaussian', type=int, default=3, help='number of gaussian for MDN')
     args = parser.parse_args()
 
     Logger.init_logger(log_path='log_files', log_name=args.algorithm)
@@ -59,13 +61,13 @@ def main():
     # creating environment
     env = simulator_unity
 
-    state_dim = NON_SENSOR_SEGMENT_DIM * OBSERVATION_TIME_WINDOW + SENSOR_SEGMENT_DIM  # + 19 #- 2
-    action_dim = ACTION_DIM
+    state_dim = constants.NON_SENSOR_SEGMENT_DIM * constants.OBSERVATION_TIME_WINDOW + constants.SENSOR_SEGMENT_DIM
+    action_dim = constants.ACTION_DIM
 
     memory = Memory()
     measurements_summary = MeasurementsSummary()
 
-    if args.algorithm == 'GAIL':
+    if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
         # load human demonstrations
         human_demonstrations = pd.read_csv(args.human_demonstrations)
         human_demonstrations = np.array(human_demonstrations)
@@ -83,7 +85,7 @@ def main():
         model.policy_old.actor.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/actor_old.pt"))
         model.policy_old.critic.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/critic_old.pt"))
 
-        if args.algorithm == 'GAIL':
+        if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
             model.discriminator.load_state_dict(torch.load(f"saved_models/{args.algorithm}/best/discriminator.pt"))
 
     except:
@@ -114,13 +116,13 @@ def main():
         obs = simulator_unity.get_init_obs()
         initial_speed = float(obs['speed'])
 
-        t1_obs = simulator_unity.make_pre_observation(obs, INIT_CURRENT_STEERING, INIT_CURRENT_TORQUE)
+        t1_obs = simulator_unity.make_pre_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE)
         t2_obs = copy.copy(t1_obs)
 
-        ob = simulator_unity.make_observation(obs, INIT_CURRENT_STEERING, INIT_CURRENT_TORQUE, t1_obs, t2_obs, INIT_HUMAN_HEADING, INIT_HUMAN_TRACKPOS)
+        ob = simulator_unity.make_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE, t1_obs, t2_obs, constants.INIT_HUMAN_HEADING, constants.INIT_HUMAN_TRACKPOS)
         state = tuple2array(ob)
 
-        while initial_speed < np.random.uniform(MIN_INIT_SPEED, MAX_INIT_SPEED):
+        while initial_speed < np.random.uniform(constants.MIN_INIT_SPEED, constants.MAX_INIT_SPEED):
             finished_round = False
             a_drive = [0, 1, 0]
             ob, reward, done, init_pointer, _, _ = env.step(a_drive, episode_step=0, pre_obs=t1_obs, t_2_obs=t2_obs, episode_num=i_episode-1)
@@ -142,7 +144,7 @@ def main():
 
             action = np.clip(action, -1,1)
             ob, reward, done, current_pointer, _, _ = env.step(action, episode_step=t, pre_obs=t1_obs, t_2_obs=t2_obs, episode_num=i_episode-1)
-            if args.algorithm == 'GAIL':
+            if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
                 reward = model.get_reward(state, action)
             print("reward: ", reward)
             state = tuple2array(ob)
@@ -179,7 +181,7 @@ def main():
                     model.batch_size = time_step
                     last_value = model.policy_old.critic(state_eval)
                     model.update_actor_critic(memory, last_value)
-                    if args.algorithm == 'GAIL':
+                    if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
 
                         # check creterion whether or not training the discriminator to avoid overfit:
                         states = torch.stack(memory.states).squeeze(dim=1).to(device).detach()

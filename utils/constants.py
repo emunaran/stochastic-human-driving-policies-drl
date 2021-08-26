@@ -1,0 +1,28 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class AlgorithmType:
+    PLAIN: str
+    MDN: str
+    GAIL: str
+
+
+ALGORITHM_TYPE = AlgorithmType(PLAIN='PLAIN', MDN='MDN', GAIL='GAIL')
+SENSOR_SEGMENT_DIM = 288
+NON_SENSOR_SEGMENT_DIM = 11
+OBSERVATION_TIME_WINDOW = 3
+ACTION_DIM = 2
+
+INIT_CURRENT_STEERING = 0.0
+INIT_CURRENT_TORQUE = 0.0
+INIT_HUMAN_HEADING = 0.0
+INIT_HUMAN_TRACKPOS = 3.0
+
+MIN_INIT_SPEED = 30
+MAX_INIT_SPEED = 90
+
+
+
+
+

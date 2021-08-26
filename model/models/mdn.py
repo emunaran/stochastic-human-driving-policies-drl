@@ -7,9 +7,9 @@ import numpy as np
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, n_var, n_gaussian, action_std=0.0):
-        super(ActorCritic, self).__init__()
+class ActorCriticMDN(nn.Module):
+    def __init__(self, state_dim, action_dim, n_var, n_gaussian):
+        super(ActorCriticMDN, self).__init__()
 
         self.actor = nn.Sequential(
             nn.Linear(state_dim, n_var),
