@@ -23,7 +23,7 @@ class GAIL:
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr, betas=self.betas) #, weight_decay=1e-5
 
         self.discriminator = Discriminator(state_dim + action_dim, self.units).to(device)
-        self.discriminator_optimizer = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr*0.1, betas=self.betas) #, weight_decay=1e-5
+        self.discriminator_optimizer = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr*0.1, betas=self.betas, weight_decay=1e-5)
         self.policy_old = ActorCritic(state_dim, action_dim, self.units).to(device)
 
         self.MseLoss = nn.MSELoss()
