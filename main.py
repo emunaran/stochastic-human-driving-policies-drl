@@ -64,8 +64,7 @@ def main():
         print("human_demonstrations.shape", human_demonstrations.shape)
         model = GAIL(state_dim, action_dim, args)
     else:
-        model = PPO(state_dim, action_dim, args)#args.units, args.lr, args.betas, args.gamma, args.k_epochs, args.eps_clip, args.batch_size, args.mini_batch_size, args.lam)
-    # print(lr, betas)
+        model = PPO(state_dim, action_dim, args)
 
     print("now we load the weights")
     try:
@@ -172,7 +171,7 @@ def main():
                     model.update_actor_critic(memory, last_value)
                     if args.algorithm == constants.ALGORITHM_TYPE.GAIL:
 
-                        # check creterion whether or not training the discriminator to avoid overfit:
+                        # check criterion whether or not training the discriminator to avoid overfit:
                         states = torch.stack(memory.states).squeeze(dim=1).to(device).detach()
                         actions = torch.stack(memory.actions).squeeze(dim=1).to(device).detach()
                         learner_acc = ((model.discriminator(torch.cat([states, actions], dim=1)) > 0.5).float()).mean()
