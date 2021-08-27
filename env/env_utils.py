@@ -1,5 +1,7 @@
 import numpy as np
 import collections as col
+from utils import constants
+import re
 
 
 def agent_to_unity(u):
@@ -247,3 +249,85 @@ def make_pre_observation(data, current_steering, current_torque):
         )
 
     return pre_obs
+
+
+def get_termination_state_features(sample):
+
+    sign_theta = np.array(float(sample['sign_theta']), dtype=np.float32) * (np.pi / 180)
+    collision_detector = np.array(float(sample['collisionDetector']), dtype=np.float32)
+    road_boundaries = np.array(float(sample['trackPos']), dtype=np.float32) / 6
+    return sign_theta, collision_detector, road_boundaries
+
+
+def get_kinematic_features(sample):
+
+    speed = np.array(float(sample['speed']), dtype=np.float32)
+    track_pos = np.array(float(sample['trackPos']), dtype=np.float32)
+    return speed, track_pos
+
+
+def flat_sensors_values(obs):
+
+    obs = obs._replace(sensors_segments=(np.zeros(288) - 1),
+                       boundaries_sensors=(np.zeros(19) - 1))
+    return obs
+
+
+def get_expert_reference(mileage, expert, algorithm, sample_number):
+
+    if algorithm == constants.ALGORITHM_TYPE.PLAIN:
+        human_trackPos_arr, human_heading_arr, human_speed_arr = __get_expert_reference_plain_algo(expert)
+    else:
+        human_trackPos_arr, human_heading_arr, human_speed_arr = __get_expert_reference_mdn_algo(expert, sample_number)
+
+    inx = round(float(mileage))
+    human_arc_length_arr = expert.iloc[:, 0]
+    max_human_mileage = np.max(human_arc_length_arr)
+    if inx > max_human_mileage:
+        inx = max_human_mileage - 1
+    human_trackPos = human_trackPos_arr[inx]
+    human_heading = human_heading_arr[inx]
+    human_speed = human_speed_arr[inx]
+    # human_std_trackPos = human_std_trackPos_arr[inx]
+    # human_std_heading = human_std_heading_arr[inx]
+    # human_std_speed = human_std_speed_arr[inx]
+
+    return human_trackPos, human_heading, human_speed, inx
+
+
+def __get_expert_reference_plain_algo(expert):
+
+    human_trackPos_arr = expert[['trackPos_mu']]
+    human_trackPos_arr = (human_trackPos_arr.iloc[:, 0])
+
+    human_speed_arr = expert[['speed_mu']]
+    human_speed_arr = (human_speed_arr.iloc[:, 0])
+
+    human_heading_arr = expert[['heading_mu']]
+    human_heading_arr = (human_heading_arr.iloc[:, 0])
+
+    return human_trackPos_arr, human_heading_arr, human_speed_arr
+
+
+def __get_expert_reference_mdn_algo(expert, sample_number):
+
+    print('trackPos_sample_{}'.format(sample_number))
+    human_trackPos_arr = expert[['trackPos_sample_{}'.format(sample_number)]]
+    human_trackPos_arr = (human_trackPos_arr.iloc[:, 0])
+
+    human_speed_arr = expert[['speed_sample_{}'.format(sample_number)]]
+    human_speed_arr = (human_speed_arr.iloc[:, 0])
+
+    human_heading_arr = expert[['heading_sample_{}'.format(sample_number)]]
+    human_heading_arr = (human_heading_arr.iloc[:, 0])
+
+    return human_trackPos_arr, human_heading_arr, human_speed_arr
+
+
+def get_mileage_and_pointer(sample):
+
+    mileage = re.sub('[,]', '', sample['mileage'])
+    pointer = re.sub('[,]', '', sample['pointer'])
+    pointer = round(float(pointer))
+
+    return mileage, pointer
