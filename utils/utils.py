@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from utils import constants
+from . import constants
+from pathlib import Path
 
 
 def tuple2array(ob):
@@ -61,8 +62,10 @@ def get_t2_obs(t2_obs, ob):
 
 def save_model(model, episode_reward, best_score, algorithm_name):
 
+    Path(f'saved_models/{algorithm_name}/best').mkdir(parents=True, exist_ok=True)
+
     if episode_reward > best_score:
-        best_score = episode_reward
+        # best_score = episode_reward
         # save the best model:
         torch.save(model.policy.actor.state_dict(), f"saved_models/{algorithm_name}/best/actor.pt")
         torch.save(model.policy.critic.state_dict(), f"saved_models/{algorithm_name}/best/critic.pt")
