@@ -2,7 +2,7 @@ import argparse
 import torch
 import pandas as pd
 import numpy as np
-import simulator_unity
+# import simulator_unity
 import tensorflow as tf
 from keras import backend as K
 import copy
@@ -15,6 +15,8 @@ from utils.logger import Logger
 import logging
 from utils import constants
 from dataclasses import asdict
+from env.simulator import Simulator, server, env_utils
+
 
 writer = SummaryWriter()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,9 +35,9 @@ def main():
     parser.add_argument('--mini-batch-size', type=int, default=256, help='mini batch size')
     parser.add_argument('--max-length', type=int, default=512, help='max length parameter for the dynamic update algorithm')
     parser.add_argument('--discrim-update-num', type=int, default=1, help='number of updates for discriminator')
-    parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--betas', type=tuple, default=(0.9, 0.999), help='betas for Adam optimizer')
-    parser.add_argument('--gamma', type=float, default=0.96, help='discount factor')
+    parser.add_argument('--gamma', type=float, default=0.98, help='discount factor')
     parser.add_argument('--lam', type=float, default=0.95, help='lambda for GAE')
     parser.add_argument('--k-epochs', type=int, default=5, help='policy update number of epochs')
     parser.add_argument('--eps-clip', type=float, default=0.2, help='clip parameter for PPO')
@@ -44,8 +46,10 @@ def main():
 
     Logger.init_logger(log_path='log_files', log_name=args.algorithm)
     logging.info(f'logging for {args.algorithm} was started')
+
     # creating environment
-    env = simulator_unity
+    # env = simulator_unity # this is the old version of env - use it if something breaks.
+    env = Simulator(args.train, args.algorithm)
 
     state_dim = constants.NON_SENSOR_SEGMENT_DIM * constants.OBSERVATION_TIME_WINDOW + constants.SENSOR_SEGMENT_DIM
     action_dim = constants.ACTION_DIM
@@ -98,13 +102,13 @@ def main():
     for i_episode in range(1, args.max_episodes + 1):
 
         episode_reward = 0
-        obs = simulator_unity.get_init_obs()
+        obs = server.get_init_obs()
         initial_speed = float(obs['speed'])
 
-        t1_obs = simulator_unity.make_pre_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE)
+        t1_obs = env_utils.make_pre_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE)
         t2_obs = copy.copy(t1_obs)
 
-        ob = simulator_unity.make_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE, t1_obs, t2_obs, constants.INIT_HUMAN_HEADING, constants.INIT_HUMAN_TRACKPOS)
+        ob = env_utils.make_observation(obs, constants.INIT_CURRENT_STEERING, constants.INIT_CURRENT_TORQUE, t1_obs, t2_obs, constants.INIT_HUMAN_HEADING, constants.INIT_HUMAN_TRACKPOS)
         state = tuple2array(ob)
 
         while initial_speed < np.random.uniform(constants.MIN_INIT_SPEED, constants.MAX_INIT_SPEED):
