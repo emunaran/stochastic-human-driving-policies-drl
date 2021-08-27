@@ -1,7 +1,5 @@
 import threading
-import collections as col
 import re
-import pandas as pd
 import numpy as np
 import socketio
 import eventlet
