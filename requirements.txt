@@ -10,4 +10,9 @@ tensorboardX==2.1
 tensorflow==1.13.1
 torch==1.7.1
 python-socketio==1.8.4
+python-engineio==2.0.3
 eventlet==0.30.1
+jinja2==2.11.3
+MarkupSafe==1.1.1
+itsdangerous==1.1.0
+protobuf==3.14.0
