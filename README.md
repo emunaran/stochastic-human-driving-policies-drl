@@ -29,7 +29,7 @@ Please be patient, this may take up to a week.
 
 To test your agent open any track you want and run at your terminal:
 ```
-python main.py --algorithm MDN --test
+python main.py --algorithm MDN
 ```
 
 ## Reference
