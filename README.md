@@ -7,38 +7,38 @@ In short, this project is designed to find human-like driving policies using the
 Tested on python 3.7.9 version. At the moment, you can only run this project on a Windows OS. 
 
 1. Clone the repository and install the requirements
-'''
+```
 pip install -r requirements.txt
-'''
+```
 
-2. Extract data.zip. you will find there two files: 
-a. under expert->gp (stands for Gaussian Process) you will find the GP_expert.csv to run the "PLAIN" and "MDN" algorithms mentioned in the paper.
-b. under expert->demonstrations you will find the demonstrations.csv to run the "GAIL" algorithm that used as a benchmark comparison to our method.
+2. Extract data.zip. You will find there two files: 
+   1. Under expert->gp (stands for Gaussian Process) you will find the GP_expert.csv to run the "PLAIN" and "MDN" algorithms mentioned in the paper.
+   2. Under expert->demonstrations you will find the demonstrations.csv to run the "GAIL" algorithm that used as a benchmark comparison to our method.
 
 3. Extract simulator.zip, the Unity simulator. You will find there three environments:
-   a. training road (track 0)
-   b. generalization road 1 (track 1)
-   c. generalization road 2 (track 2)
+   1. training road (track 0)
+   2. generalization road 1 (track 1)
+   3. generalization road 2 (track 2)
 
 To replicate the paper results you sholud train the agents on track 0 and test it on track 1 and 2.
 To train the agent open the track 0 file and run on your terminal:
-'''
+```
 python main.py --algorithm MDN --train
-'''
+```
 Please be patient, this may take up to a week.
 
-To test your agent open any track you like and run on your terminal:
-'''
+To test your agent open any track you want and run at your terminal:
+```
 python main.py --algorithm MDN --test
-'''
+```
 
 ## Reference
 If you find this work useful in your research, please cite:
-'''
+```
 @article{emuna2020deep,
   title={Deep reinforcement learning for human-like driving policies in collision avoidance tasks of self-driving cars},
   author={Emuna, Ran and Borowsky, Avinoam and Biess, Armin},
   journal={arXiv preprint arXiv:2006.04218},
   year={2020}
 }
-'''
+```
