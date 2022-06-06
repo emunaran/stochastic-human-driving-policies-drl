@@ -2,7 +2,6 @@ import argparse
 import torch
 import pandas as pd
 import numpy as np
-# import simulator_unity
 import tensorflow as tf
 from keras import backend as K
 import copy
