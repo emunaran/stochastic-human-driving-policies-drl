@@ -1,5 +1,5 @@
 # stochastic-human-driving-policies-drl
-This repository is the implementation of the paper ["Deep Reinforcement Learning for Human-Like Driving Policies in Collision Avoidance Tasks of Self-Driving Cars"](https://arxiv.org/abs/2006.04218) (now being reviewed after an extensive revision).
+This repository is the implementation of the paper ["Deep Reinforcement Learning for Human-Like Driving Policies in Collision Avoidance Tasks of Self-Driving Cars"](https://arxiv.org/abs/2006.04218) and ["Example-guided learning of stochastic human driving policies using deep reinforcement learning"](https://link.springer.com/article/10.1007/s00521-022-07947-2), an extended paper of the former.
 Note that this project also provides the [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/abs/1606.03476) (Ho, J., & Ermon, S., 2016) algorithm implementation as a benchmark. The results will be published soon under the revised version. It also contains a unique simulator environment and data (which will be discussed later) for training so you can replicate the results.
 In short, this project is designed to find human-like driving policies using imitation learning approach we have developed. To this end, we demonstrate our approach to relatively simple tasks - static/dynamic obstacle avoidance tasks. In the article, you will find further discussions and limitations.
 
@@ -38,10 +38,12 @@ python main.py --algorithm MDN
 ## Reference
 If you find this work useful in your research, please cite:
 ```
-@article{emuna2020deep,
-  title={Deep reinforcement learning for human-like driving policies in collision avoidance tasks of self-driving cars},
-  author={Emuna, Ran and Borowsky, Avinoam and Biess, Armin},
-  journal={arXiv preprint arXiv:2006.04218},
-  year={2020}
+@article{emuna2022example,
+  title={Example-guided learning of stochastic human driving policies using deep reinforcement learning},
+  author={Emuna, Ran and Duffney, Rotem and Borowsky, Avinoam and Biess, Armin},
+  journal={Neural Computing and Applications},
+  pages={1--14},
+  year={2022},
+  publisher={Springer}
 }
 ```
